@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机器人路径规划系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+    <!-- Google Fonts for premium feel -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>自动机器人路径规划系统</h1>
+            <p>Q-Learning 算法可视化与控制台</p>
+        </header>
+
+        <main>
+            <div class="control-panel card">
+                <h2>控制面板</h2>
+
+                <div class="section">
+                    <h3>地图编辑</h3>
+                    <div class="tool-selector">
+                        <button class="tool-btn active" data-tool="1" title="设置障碍物">障碍物</button>
+                        <button class="tool-btn" data-tool="2" title="设置起点">起点</button>
+                        <button class="tool-btn" data-tool="3" title="设置终点">终点</button>
+                        <button class="tool-btn" data-tool="0" title="清除格子">橡皮擦</button>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>环境设置</h3>
+                    <button id="random-btn" class="action-btn secondary">随机生成环境</button>
+                </div>
+
+                <div class="section">
+                    <h3>训练设置</h3>
+                    <div class="input-group">
+                        <label>训练轮数 (Episodes):</label>
+                        <input type="number" id="episodes-input" value="1000" min="100" max="5000">
+                    </div>
+                    <div class="train-controls">
+                        <button id="train-btn" class="action-btn primary">重新训练</button>
+                        <button id="test-btn" class="action-btn warning">验证模型 (泛化测试)</button>
+                    </div>
+                    <div id="status-indicator">就绪</div>
+                </div>
+
+                <div class="section results-text" style="display:none;" id="text-results">
+                    <h3>最新训练统计</h3>
+                    <p>是否成功: <span id="res-success"></span></p>
+                    <p>步数: <span id="res-steps"></span></p>
+                    <p>总奖励: <span id="res-reward"></span></p>
+                </div>
+            </div>
+
+            <div class="grid-container card">
+                <div id="grid-world"></div>
+            </div>
+        </main>
+
+        <section id="output-gallery" class="card" style="display:none;">
+            <h2>训练结果 (点击图片放大)</h2>
+            <div class="gallery-grid">
+                <div class="gallery-item">
+                    <h4>最优路径</h4>
+                    <img id="img-path" src="" alt="最优路径" class="zoomable">
+                </div>
+                <div class="gallery-item">
+                    <h4>训练曲线</h4>
+                    <img id="img-curves" src="" alt="训练曲线" class="zoomable">
+                </div>
+                <div class="gallery-item">
+                    <h4>学习策略</h4>
+                    <img id="img-policy" src="" alt="学习策略" class="zoomable">
+                </div>
+                <div class="gallery-item">
+                    <h4>价值函数</h4>
+                    <img id="img-value" src="" alt="价值函数" class="zoomable">
+                </div>
+                <div class="gallery-item">
+                    <h4>路径效率分析</h4>
+                    <img id="img-efficiency" src="" alt="路径效率" class="zoomable">
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="image-modal" class="modal">
+        <span class="close">&times;</span>
+        <img class="modal-content" id="modal-img">
+        <div id="caption"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=2"></script>
+</body>
+
+</html>
