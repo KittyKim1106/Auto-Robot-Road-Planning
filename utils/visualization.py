@@ -491,8 +491,9 @@ class Visualizer:
         if save_path:
             anim.save(save_path, writer='pillow', fps=1000//interval)
             print(f"动画已保存到: {save_path}")
-        
-        plt.show()
+            plt.close(fig)  # 关闭图形，避免在服务器环境中阻塞
+        else:
+            plt.show()  # 仅在不保存时显示
         
         return anim
     

@@ -148,6 +148,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayResults(data) {
         // Text stats
         document.getElementById('text-results').style.display = 'block';
+
+        if (data.is_unreachable) {
+            document.getElementById('res-success').innerText = "无法到达 (Unreachable)";
+            document.getElementById('res-steps').innerText = "-";
+            document.getElementById('res-reward').innerText = "-";
+            updateStatus("目标无法到达 (Unreachable)", "red");
+            document.getElementById('output-gallery').style.display = 'none';
+            return;
+        }
+
         document.getElementById('res-success').innerText = data.success ? "是" : "否";
         document.getElementById('res-steps').innerText = data.steps;
         document.getElementById('res-reward').innerText = data.reward.toFixed(1);
@@ -157,14 +167,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Helper to update img src with timestamp to force refresh
         const updateImg = (id, filename) => {
-            document.getElementById(id).src = `/static/images/${filename}`;
+            if (filename) {
+                document.getElementById(id).src = `/static/images/${filename}`;
+            }
         };
 
-        updateImg('img-path', data.images.path);
-        updateImg('img-curves', data.images.curves);
-        updateImg('img-policy', data.images.policy);
-        updateImg('img-value', data.images.value);
-        updateImg('img-efficiency', data.images.efficiency);
+        if (data.images) {
+            updateImg('img-path', data.images.path);
+            updateImg('img-route-map', data.images.route_map);
+            updateImg('img-curves', data.images.curves);
+            updateImg('img-policy', data.images.policy);
+            updateImg('img-value', data.images.value);
+            updateImg('img-efficiency', data.images.efficiency);
+        }
     }
 
     // Modal Logic

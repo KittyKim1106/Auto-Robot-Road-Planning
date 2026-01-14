@@ -168,7 +168,7 @@ class QLearningAgent:
     
     def get_optimal_path(self, env) -> Tuple[List[Tuple[int, int]], float, bool]:
         """
-        使用训练好的Q表获取最优路径
+        使用训练好的Q表获取最优路径（带实时避障）
         
         Args:
             env: 网格环境
@@ -186,11 +186,21 @@ class QLearningAgent:
         visited = set()
         visited.add(state_pos)
         
-        max_steps = env.grid_size * env.grid_size
+        max_steps = env.grid_size * env.grid_size * 2  # 增加步数上限以允许绕行
         
         for _ in range(max_steps):
             # 使用贪心策略 (不探索)
             action = self.choose_action(state, training=False)
+            
+            # 检查Q-Learning建议的动作是否会撞障碍物
+            dr, dc = env.ACTION_EFFECTS[action]
+            next_pos = (state_pos[0] + dr, state_pos[1] + dc)
+            
+            # 如果会撞障碍物或撞墙，尝试用BFS绕行
+            if not env.is_valid_pos(next_pos) or next_pos in visited:
+                bypass_action = self._find_bypass_action(env, state_pos, visited)
+                if bypass_action is not None:
+                    action = bypass_action
             
             # 执行动作
             next_state_pos, reward, done, info = env.step(action)
@@ -198,21 +208,95 @@ class QLearningAgent:
             
             total_reward += reward
             
-            # 检测循环
-            if next_state_pos in visited and not done:
-                # 陷入循环，失败
+            # 如果位置没变（撞墙/障碍物），尝试其他方向
+            if next_state_pos == state_pos:
+                bypass_action = self._find_bypass_action(env, state_pos, visited)
+                if bypass_action is not None:
+                    next_state_pos, reward, done, info = env.step(bypass_action)
+                    next_state = self.pos_to_state(next_state_pos, env.grid_size)
+                    total_reward += reward
+            
+            # 检测循环 - 只有在真的走不下去时才判定失败
+            if next_state_pos == state_pos:
+                # 尝试了绕行还是走不动，失败
                 return path, total_reward, False
             
             if next_state_pos not in visited:
                 path.append(next_state_pos)
                 visited.add(next_state_pos)
             
+            state_pos = next_state_pos
             state = next_state
             
             if done:
                 return path, total_reward, info['event'] == 'goal'
         
         return path, total_reward, False
+    
+    def _find_bypass_action(self, env, current_pos: Tuple[int, int], 
+                            visited: set) -> Optional[int]:
+        """
+        使用BFS找到一个可以绕行的动作
+        
+        Args:
+            env: 网格环境
+            current_pos: 当前位置
+            visited: 已访问的位置集合
+            
+        Returns:
+            绕行动作，如果没有可用动作返回None
+        """
+        from collections import deque
+        
+        goal = env.goal_pos
+        best_action = None
+        best_distance = float('inf')
+        
+        # 方案1：优先选择离终点更近且未访问的方向
+        for action in range(self.n_actions):
+            dr, dc = env.ACTION_EFFECTS[action]
+            next_pos = (current_pos[0] + dr, current_pos[1] + dc)
+            
+            if env.is_valid_pos(next_pos) and next_pos not in visited:
+                # 计算到终点的曼哈顿距离
+                dist = abs(next_pos[0] - goal[0]) + abs(next_pos[1] - goal[1])
+                if dist < best_distance:
+                    best_distance = dist
+                    best_action = action
+        
+        if best_action is not None:
+            return best_action
+        
+        # 方案2：如果所有未访问方向都不可行，用BFS找最近的未访问可达格子
+        queue = deque([(current_pos, [])])  # (位置, 动作序列)
+        bfs_visited = {current_pos}
+        
+        while queue:
+            pos, actions = queue.popleft()
+            
+            for action in range(self.n_actions):
+                dr, dc = env.ACTION_EFFECTS[action]
+                next_pos = (pos[0] + dr, pos[1] + dc)
+                
+                if env.is_valid_pos(next_pos) and next_pos not in bfs_visited:
+                    new_actions = actions + [action]
+                    
+                    # 如果找到未访问过的位置，返回第一步动作
+                    if next_pos not in visited:
+                        return new_actions[0] if new_actions else None
+                    
+                    bfs_visited.add(next_pos)
+                    queue.append((next_pos, new_actions))
+        
+        # 方案3：实在没办法，返回任意可走的方向
+        for action in range(self.n_actions):
+            dr, dc = env.ACTION_EFFECTS[action]
+            next_pos = (current_pos[0] + dr, current_pos[1] + dc)
+            if env.is_valid_pos(next_pos):
+                return action
+        
+        return None
+
     
     def get_policy(self, grid_size: int = 10) -> np.ndarray:
         """

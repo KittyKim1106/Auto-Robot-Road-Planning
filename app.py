@@ -150,6 +150,20 @@ def test_generalization():
 
 def generate_results(success_source="training"):
     """Helper to generate visualizations and JSON response."""
+    # Check if goal is reachable via BFS first
+    bfs_len = state.env.get_bfs_shortest_path()
+    if bfs_len == -1:
+        # Destination unreachable: Stop training/testing state immediately
+        state.is_training = False
+        return jsonify({
+            "success": False,
+            "is_unreachable": True,
+            "steps": 0,
+            "reward": 0,
+            "success_rate": state.agent.training_rewards[-100:].count(100) / 100.0 if len(state.agent.training_rewards) > 0 else 0,
+            "images": {}
+        })
+
     # Get Optimal Path (Pure exploitation)
     path, total_reward, success = state.agent.get_optimal_path(state.env)
     
@@ -168,6 +182,11 @@ def generate_results(success_source="training"):
         path_img = f"path_{run_id}.png"
         state.vis.plot_grid(state.env, path=path, title="Optimal Path (Current Env)", show=False, 
                            save_path=os.path.join(state.images_dir, path_img))
+    
+    # NEW: Generate Static Route Map (Always)
+    route_map_img = f"route_map_{run_id}.png"
+    state.vis.plot_grid(state.env, path=path, title="Complete Route Map", show=False,
+                       save_path=os.path.join(state.images_dir, route_map_img))
     
     # 2. Training Curves (Always show history of the current brain)
     curves_img = f"curves_{run_id}.png"
@@ -215,6 +234,7 @@ def generate_results(success_source="training"):
         "success_rate": state.agent.training_rewards[-100:].count(100) / 100.0 if len(state.agent.training_rewards) > 0 else 0,
         "images": {
             "path": path_img,
+            "route_map": route_map_img,
             "curves": curves_img,
             "policy": policy_img,
             "value": value_img,
